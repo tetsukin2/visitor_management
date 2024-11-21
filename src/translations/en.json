@@ -1,0 +1,25 @@
+{
+  "form": {
+    "visitDateTime": "Visit Date & Time",
+    "visitorCompany": "Visitor's Company Name",
+    "visitorName": "Visitor's Name",
+    "hostDepartment": "Host's Department",
+    "hostPosition": "Host's Position",
+    "hostName": "Host's Name",
+    "visitReason": "Reason for Visit",
+    "visitReasonOptions": [
+      "Official Business",
+      "Consultation",
+      "Sales",
+      "Other (specify)"
+    ],
+    "temperature": "Temperature",
+    "specialRequirements": "Special Requirements",
+    "irregularities": "Irregularities",
+    "leaveTime": "Leave Time"
+  },
+  "buttons": {
+    "submit": "Submit",
+    "translate": "Translate"
+  }
+}
