@@ -7,12 +7,7 @@
     "hostPosition": "受拜訪者職稱",
     "hostName": "受辦訪者姓名",
     "visitReason": "來訪事由",
-    "visitReasonOptions": [
-      "洽公",
-      "需求訪談",
-      "推銷業務",
-      "其它 (點選其它, 開放讓使用者打字輸入)"
-    ],
+    "visitReasonOptions": ["洽公", "需求訪談", "推銷業務", "其它 (指定)"],
     "temperature": "體溫",
     "specialRequirements": "特殊需求",
     "irregularities": "異常說明",
