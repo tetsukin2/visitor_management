@@ -1,7 +1,14 @@
 export async function POST(req) {
-  const { formID } = await req.json();
-  console.log(`Checkout recorded for formID: ${formID}`);
+  try {
+    const { formID, checkOutTime } = await req.json();
+    console.log("Check-out data received:", { formID, checkOutTime });
 
-  // Simulate updating the database
-  return new Response(JSON.stringify({ success: true }), { status: 200 });
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+  } catch (error) {
+    console.error("Error in checkout route:", error);
+    return new Response(
+      JSON.stringify({ success: false, error: "Invalid checkout data" }),
+      { status: 400 }
+    );
+  }
 }

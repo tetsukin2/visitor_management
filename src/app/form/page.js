@@ -4,7 +4,7 @@ import { useState } from "react";
 import VisitorForm from "@/components/VisitorForm";
 
 export default function VisitorFormPage() {
-  const [language, setLanguage] = useState("en"); // Default to English
+  const [language, setLanguage] = useState("en");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-default">

@@ -2,207 +2,161 @@
 
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { DateTime } from "luxon";
 import en from "../translations/en.json";
 import zh from "../translations/zh.json";
+import sharedTranslations from "../translations/sharedTranslations";
+import { checkIn, checkOut } from "../utils/api";
+
+import Header from "./Header";
+import FormField from "./FormField";
+import SubmittedScreen from "./SubmittedScreen";
+import CheckedOutScreen from "./CheckedOutScreen";
+import WhiteContainer from "./common/Container";
 
 const translations = { en, zh };
 
 export default function VisitorForm() {
   const [formData, setFormData] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
-  const [language, setLanguage] = useState("en");
+  const [checkedOut, setCheckedOut] = useState(false);
+  const [language, setLanguage] = useState("zh");
+  const [showOtherField, setShowOtherField] = useState(false);
 
   const t = translations[language] || {};
+  const sharedT = sharedTranslations[language] || {};
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleReasonChange = (e) => {
+    const value = e.target.value.trim();
 
-    const formID = uuidv4();
-    const visitTime = new Date().toISOString();
+    setFormData({ ...formData, visitReason: value });
 
-    const finalFormData = { ...formData, formID, visitTime };
-
-    const response = await fetch("/api/form", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(finalFormData),
-    });
-
-    if (response.ok) {
-      setQrCodeUrl(`${window.location.origin}/checkout/${formID}`);
-      setSubmitted(true);
+    if (value.toLowerCase() === "other (specify)" || value.includes("其它")) {
+      setShowOtherField(true);
     } else {
-      alert("Error submitting the form. Please try again.");
+      setShowOtherField(false);
     }
   };
 
-  const toggleLanguage = () => {
-    setLanguage((prev) => (prev === "en" ? "zh" : "en"));
+  const handleCheckIn = async (e) => {
+    e.preventDefault();
+
+    const formID = uuidv4();
+    const visitTime = DateTime.now().setZone("Asia/Taipei").toISO();
+
+    const finalFormData = { ...formData, formID, visitTime };
+
+    try {
+      await checkIn(finalFormData);
+      console.log("Check-in data:", finalFormData);
+      setFormData(finalFormData);
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Error during check-in:", error);
+      alert("Error during check-in. Please try again.");
+    }
   };
 
+  const handleCheckOut = async () => {
+    const checkOutTime = DateTime.now().setZone("Asia/Taipei").toISO();
+
+    const checkoutData = { formID: formData.formID, checkOutTime };
+
+    try {
+      await checkOut(checkoutData);
+      console.log("Check-out data:", checkoutData);
+      setCheckedOut(true);
+    } catch (error) {
+      console.error("Error during check-out:", error);
+      alert("Error during check-out. Please try again.");
+    }
+  };
+
+  if (checkedOut) {
+    return <CheckedOutScreen sharedT={sharedT} />;
+  }
+
   if (submitted) {
-    return (
-      <div className="text-center h-screen flex items-center justify-center">
-        <div>
-          <h2 className="text-xl font-bold">
-            {language === "en"
-              ? "Form Submitted Successfully!"
-              : "表格提交成功！"}
-          </h2>
-          <p>
-            {language === "en"
-              ? "Show this QR code at the exit."
-              : "請在出口處出示此二維碼。"}
-          </p>
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
-              qrCodeUrl
-            )}&size=200x200`}
-            alt="Checkout QR Code"
-            className="mt-4"
-          />
-        </div>
-      </div>
-    );
+    return <SubmittedScreen onSignOut={handleCheckOut} sharedT={sharedT} />;
   }
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      {/* Header Section */}
-      <div className="flex items-center justify-between w-full max-w-4xl mb-4 gap-x-2 sm:gap-x-4 md:gap-x-12">
-        <h1 className="text-2xl font-bold truncate">
-          {language === "en" ? "Visitor Registration" : "訪客登記表"}
-        </h1>
-        <button
-          onClick={toggleLanguage}
-          className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-1 px-4 rounded"
-        >
-          {language === "en" ? "ZH" : "EN"}
-        </button>
-      </div>
+    <div className="h-screen flex flex-col items-center justify-center bg-gray-100 p-4 w-11/12">
+      <Header
+        language={language}
+        toggleLanguage={() => setLanguage(language === "en" ? "zh" : "en")}
+        title={sharedT.visitorRegistration}
+      />
 
-      {/* Scrollable White Container */}
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] p-6 overflow-y-auto">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.visitorName || "Visitor's Name"}:
-            </label>
-            <input
-              type="text"
-              name="visitorName"
-              required
+      <WhiteContainer>
+        <form onSubmit={handleCheckIn} className="space-y-4">
+          <FormField
+            label={t.form?.visitorName || "Visitor's Name"}
+            name="visitorName"
+            required
+            onChange={handleInputChange}
+          />
+          <FormField
+            label={t.form?.visitorCompany || "Visitor's Company"}
+            name="visitorCompany"
+            required
+            onChange={handleInputChange}
+          />
+          <FormField
+            label={t.form?.hostName || "Host's Name"}
+            name="hostName"
+            required
+            onChange={handleInputChange}
+          />
+          <FormField
+            label={t.form?.hostDepartment || "Host's Department"}
+            name="hostDepartment"
+            required
+            onChange={handleInputChange}
+          />
+          <FormField
+            label={t.form?.hostPosition || "Host's Position"}
+            name="hostPosition"
+            required
+            onChange={handleInputChange}
+          />
+          <FormField
+            label={t.form?.visitReason || "Reason for Visit"}
+            name="visitReason"
+            required
+            onChange={handleReasonChange}
+            options={t.form?.visitReasonOptions || []}
+          />
+          {showOtherField && (
+            <FormField
+              label={sharedT.otherSpecify}
+              name="visitReasonDetail"
+              required={showOtherField}
               onChange={handleInputChange}
-              className="w-full p-2 border rounded"
             />
-          </div>
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.visitorCompany || "Visitor's Company"}:
-            </label>
-            <input
-              type="text"
-              name="visitorCompany"
-              required
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.hostName || "Host's Name"}:
-            </label>
-            <input
-              type="text"
-              name="hostName"
-              required
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.hostDepartment || "Host's Department"}:
-            </label>
-            <input
-              type="text"
-              name="hostDepartment"
-              required
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.hostPosition || "Host's Position"}:
-            </label>
-            <input
-              type="text"
-              name="hostPosition"
-              required
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.visitReason || "Reason for Visit"}:
-            </label>
-            <div className="relative">
-              <select
-                name="visitReason"
-                required
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded truncate"
-              >
-                {Array.isArray(t.form?.visitReasonOptions)
-                  ? t.form.visitReasonOptions.map((option, index) => (
-                      <option key={index} value={option} className="truncate">
-                        {option}
-                      </option>
-                    ))
-                  : null}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.temperature || "Temperature"}:
-            </label>
-            <input
-              type="text"
-              name="temperature"
-              required
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.specialRequirements || "Special Requirements"}:
-            </label>
-            <textarea
-              name="specialRequirements"
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-base font-medium">
-              {t.form?.irregularities || "Irregularities"}:
-            </label>
-            <textarea
-              name="irregularities"
-              onChange={handleInputChange}
-              className="w-full p-2 border rounded"
-            />
-          </div>
+          )}
+          <FormField
+            label={t.form?.temperature || "Temperature"}
+            name="temperature"
+            required
+            onChange={handleInputChange}
+          />
+          <FormField
+            label={t.form?.specialRequirements || "Special Requirements"}
+            name="specialRequirements"
+            isTextarea
+            onChange={handleInputChange}
+          />
+          <FormField
+            label={t.form?.irregularities || "Irregularities"}
+            name="irregularities"
+            isTextarea
+            onChange={handleInputChange}
+          />
           <button
             type="submit"
             className="bg-blue-600 text-white py-2 px-4 rounded w-full"
@@ -210,7 +164,7 @@ export default function VisitorForm() {
             {t.buttons?.submit || "Submit"}
           </button>
         </form>
-      </div>
+      </WhiteContainer>
     </div>
   );
 }
