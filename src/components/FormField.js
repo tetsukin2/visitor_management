@@ -9,7 +9,10 @@ export default function FormField({
 }) {
   return (
     <div>
-      <label className="block text-base font-medium">{label}</label>
+      <label className="block text-base font-medium">
+        {label}
+        {required && <span className="text-red-600 ml-1">*</span>}
+      </label>
       {options ? (
         <select
           name={name}
@@ -17,6 +20,9 @@ export default function FormField({
           onChange={onChange}
           className="w-full p-2 border rounded"
         >
+          <option value="" disabled>
+            -- Select an option --
+          </option>
           {options.map((option, index) => (
             <option key={index} value={option}>
               {option}
@@ -26,6 +32,7 @@ export default function FormField({
       ) : isTextarea ? (
         <textarea
           name={name}
+          required={required}
           onChange={onChange}
           className="w-full p-2 border rounded"
         />
