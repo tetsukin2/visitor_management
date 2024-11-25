@@ -23,7 +23,13 @@ git clone https://github.com/tetsukin2/visitor_management.git
 npm install
 ```
 
-2. run the program:
+3. Go to the updated branch:
+
+```bash
+git checkout dev
+```
+
+4. run the program:
 
 ```bash
 npm run dev
