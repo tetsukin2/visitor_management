@@ -10,6 +10,7 @@ module.exports = {
     extend: {
       colors: {
         "bg-default": "#f5f5f5",
+        companyTextColor: "#FF9090",
       },
     },
   },

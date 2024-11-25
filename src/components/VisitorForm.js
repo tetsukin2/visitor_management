@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { DateTime } from "luxon";
 import en from "../translations/en.json";
@@ -8,10 +8,11 @@ import zh from "../translations/zh.json";
 import sharedTranslations from "../translations/sharedTranslations";
 import { checkIn, checkOut } from "../utils/api";
 
-import Header from "./Header";
-import FormField from "./FormField";
-import SubmittedScreen from "./SubmittedScreen";
-import CheckedOutScreen from "./CheckedOutScreen";
+import Header from "./common/Header";
+import FormField from "./common/FormField";
+import SubmittedScreen from "./screens/SubmittedScreen";
+import CheckedOutScreen from "./screens/CheckedOutScreen";
+import ConfirmationScreen from "./screens/ConfirmationScreen";
 import WhiteContainer from "./common/Container";
 
 const translations = { en, zh };
@@ -20,11 +21,31 @@ export default function VisitorForm() {
   const [formData, setFormData] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [checkedOut, setCheckedOut] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [language, setLanguage] = useState("zh");
   const [showOtherField, setShowOtherField] = useState(false);
 
   const t = translations[language] || {};
   const sharedT = sharedTranslations[language] || {};
+
+  useEffect(() => {
+    try {
+      const savedFormData = localStorage.getItem("visitorFormData");
+      const isCheckedOut = localStorage.getItem("checkedOut");
+
+      if (savedFormData && isCheckedOut !== "true") {
+        const parsedData = JSON.parse(savedFormData);
+        console.log("Restored visitor data from localStorage:", parsedData);
+        setFormData(parsedData);
+        setSubmitted(true);
+      } else {
+        localStorage.removeItem("visitorFormData");
+        localStorage.removeItem("checkedOut");
+      }
+    } catch (error) {
+      console.error("Error reading localStorage data:", error);
+    }
+  }, []);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -48,12 +69,16 @@ export default function VisitorForm() {
     const formID = uuidv4();
     const visitTime = DateTime.now().setZone("Asia/Taipei").toISO();
 
-    const finalFormData = { ...formData, formID, visitTime };
+    const urlParams = new URLSearchParams(window.location.search);
+    const branch = urlParams.get("branch") || "branch1";
+
+    const finalFormData = { ...formData, formID, visitTime, branch };
 
     try {
       await checkIn(finalFormData);
       console.log("Check-in data:", finalFormData);
       setFormData(finalFormData);
+      localStorage.setItem("visitorFormData", JSON.stringify(finalFormData));
       setSubmitted(true);
     } catch (error) {
       console.error("Error during check-in:", error);
@@ -69,6 +94,9 @@ export default function VisitorForm() {
     try {
       await checkOut(checkoutData);
       console.log("Check-out data:", checkoutData);
+
+      localStorage.removeItem("visitorFormData");
+      localStorage.setItem("checkedOut", "true");
       setCheckedOut(true);
     } catch (error) {
       console.error("Error during check-out:", error);
@@ -76,12 +104,49 @@ export default function VisitorForm() {
     }
   };
 
+  const navigateToConfirm = () => {
+    setShowConfirmation(true);
+  };
+
+  const cancelConfirmation = () => {
+    setShowConfirmation(false);
+  };
+
+  const handleEndVisit = () => {
+    const visitTime = new Date(formData.visitTime);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - visitTime) / 60000);
+
+    if (diffInMinutes < 3) {
+      navigateToConfirm();
+    } else {
+      handleCheckOut();
+    }
+  };
+
   if (checkedOut) {
     return <CheckedOutScreen sharedT={sharedT} />;
   }
 
+  if (showConfirmation) {
+    return (
+      <ConfirmationScreen
+        onConfirmLeave={handleCheckOut}
+        onCancel={cancelConfirmation}
+        sharedT={sharedT}
+      />
+    );
+  }
+
   if (submitted) {
-    return <SubmittedScreen onSignOut={handleCheckOut} sharedT={sharedT} />;
+    return (
+      <SubmittedScreen
+        onSignOut={handleEndVisit}
+        sharedT={sharedT}
+        formData={formData}
+        navigateToConfirm={navigateToConfirm}
+      />
+    );
   }
 
   return (
