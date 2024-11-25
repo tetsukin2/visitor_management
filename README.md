@@ -17,19 +17,19 @@ Follow these steps to set up the project locally:
 git clone https://github.com/tetsukin2/visitor_management.git
 ```
 
-2. Open the project with your IDE, and run in the terminal to install all packages and dependencies:
-
-```bash
-npm install
-```
-
-3. Go to the updated branch:
+2. Open the project with your IDE, and go to the updated branch:
 
 ```bash
 git checkout dev
 ```
 
-4. run the program:
+3. Install all the necessary packages and dependencies:
+
+```bash
+npm install
+```
+
+4. Run the program:
 
 ```bash
 npm run dev
